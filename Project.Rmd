@@ -1,0 +1,60 @@
+---
+title: "Practical Machine Learning Project"
+author: "Tianzhixi Yin"
+date: "Monday, September 15, 2014"
+output: html_document
+---
+
+This is the course project of the practical machine learning class. The goal of this project is to predict the "classe" variable in the data set using any variables I can. I fitted a Random Forest model to the data and it works very well. I had tried other models but they were either too slow to train or not providing sound results.
+
+## Data Preprocessing
+```{r}
+library(caret)
+library(randomForest)
+
+# Reading the data. I copied and pasted the testing data to the top of the training .csv file.
+pmltraining <- read.csv("pml-training - Copy.csv", na.strings=c("", "NA"))
+# pmltesting <- read.csv("pml-testing.csv", na.strings=c("", "NA"))
+
+# Remove the columns where more than 90% of the entries are empty cells or NAs.
+pmltraining <- pmltraining[, colSums(is.na(pmltraining)) < 0.9 * nrow(pmltraining)]
+# pmltesting <- pmltesting[, colSums(is.na(pmltesting)) < 0.9 * nrow(pmltesting)]
+
+# Remove the row_number, user_name, and cvtd_timestamp columns because I don't think they are meaningful for building the model.
+pmltraining <- pmltraining[, -c(1, 2, 5)]
+pmltesting <- pmltesting[, -c(1, 2, 5)]
+
+# Subtraction the real testing data from the data set.
+pmltesting <- pmltraining[c(1:20), ]
+pmltraining <- pmltraining[-c(1:20), ]
+```
+
+## Cross Validation
+```{r}
+# Create a cross validation set from the training data.
+inTrain <- createDataPartition(y = pmltraining$classe, p = 0.75, list = FALSE)
+training <- pmltraining[inTrain, ]
+testing <- pmltraining[-inTrain, ]
+```
+
+## Model Building
+```{r}
+# Fit a Random Forest model to the 75% training data set.
+fit <- randomForest(classe ~ ., data = training)
+print(fit) # view results 
+# importance(fit) # importance of each predictor
+```
+We can see the error rate is around .1%, I expect the out of sample error to be similar.
+
+```{r}
+# Predict the outcomes of the validation set and check the error rate.
+predictions <- predict(fit, testing[, -57], type="response")
+confusionMatrix(predictions, testing$classe)
+```
+The error rate of the validation set is around .1%, thus I conclude that this model is indeed a good one.
+
+## Final Results
+Predict the outcomes of the real testing set.
+```{r}
+predictions.real <- predict(fit, pmltesting)
+```
